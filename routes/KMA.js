@@ -4,7 +4,7 @@ const MLIPIR_RATE = (Nvar - 1) / Nvar * 1.0
 const ALPHA = 0.5
 const ALPHA_RADIUS = 0.1
 const PORTION = 0.5
-const MAX_GEN = 200
+const MAX_GEN = 300
 const MAX_IMPROVEMENT = 30
 const MAX_GEN_IMPROVE = 3
 const MAX_GEN_STAGNAN = 6
@@ -16,9 +16,9 @@ const OPTIMUM_RADIUS = 0.07
 const OFFSET = 10
 // max dari x y z / upperbound
 const Ra = {
-    'x' : 3, 
-    'y' : 3, 
-    'z' : 3
+    'x' : 5, 
+    'y' : 5, 
+    'z' : 5
 }
 // min dari x y z / lowerbound
 const Rb = {
@@ -46,14 +46,14 @@ function KMA (journals, initPop, minPop, maxPop, initIncDecAdaPop, crawlerOpt) {
         // menentukan value1, value2, dan value3
         if (crawlerOpt === 3) {
             // acd
-            journals[i].value1 = ((journals[i].abstractVal * 0.9) + (journals[i].referencesVal * 0.1)) * OFFSET
+            journals[i].value1 = journals[i].abstractVal * OFFSET
             journals[i].value2 = journals[i].fullTextVal * OFFSET
-            journals[i].value3 = ((journals[i].keywordsVal * 0.4) + (journals[i].citedVal * 0.6)) * OFFSET
+            journals[i].value3 = ((journals[i].citedVal * 0.6) + (journals[i].keywordsVal * 0.5) + (journals[i].referencesVal * 0.3)) * OFFSET
         } else {
             // scd & ieee & sage
-            journals[i].value1 = ((journals[i].abstractVal * 0.9) + (journals[i].referencesVal * 0.1)) * OFFSET
+            journals[i].value1 = journals[i].abstractVal * OFFSET
             journals[i].value2 = journals[i].fullTextVal * OFFSET
-            journals[i].value3 = ((journals[i].citedVal * 0.4) + (journals[i].keywordsVal * 0.6)) * OFFSET
+            journals[i].value3 = ((journals[i].citedVal * 0.4) + (journals[i].keywordsVal * 0.8) + (journals[i].referencesVal * 0.1)) * OFFSET
         }
 
         // push
@@ -86,9 +86,9 @@ function KMA (journals, initPop, minPop, maxPop, initIncDecAdaPop, crawlerOpt) {
         let splitedKomodos = splitPopulation(komodos)
         
         largeKomodoBehavior(splitedKomodos.bigMales)
-        femaleBehavior(splitedKomodos.female, bestQualityKomodos(splitedKomodos.bigMales))
+        splitedKomodos.female = femaleBehavior(splitedKomodos.female, bestQualityKomodos(splitedKomodos.bigMales))
         smallKomodoBehavior(splitedKomodos.smallMales, splitedKomodos.bigMales)
-
+        
         for (let i = 0; i < splitedKomodos.bigMales.length; i++) {
             newGenKomodos.push(splitedKomodos.bigMales[i])
         }
@@ -103,11 +103,13 @@ function KMA (journals, initPop, minPop, maxPop, initIncDecAdaPop, crawlerOpt) {
         if (bestQualityKomodos(newGenKomodos).fitness < bestKomodo.fitness) {
             genImprove++
             genStagnan = 0
-            bestKomodo = newGenKomodos[0]
+            bestKomodo = bestQualityKomodos(newGenKomodos)
         } else {
             genImprove = 0
             genStagnan++
         }
+
+        rankKomodos(newGenKomodos)
 
         if (genImprove > MAX_GEN_IMPROVE) {
             // console.log("genimprove")
@@ -115,8 +117,6 @@ function KMA (journals, initPop, minPop, maxPop, initIncDecAdaPop, crawlerOpt) {
             if (adaPopSize < minPop) {
                 adaPopSize = minPop
             }
-
-            rankKomodos(newGenKomodos)
 
             // delete komodo yang paling bawah (worst fitness)
             newGenKomodos.length = adaPopSize
@@ -129,7 +129,7 @@ function KMA (journals, initPop, minPop, maxPop, initIncDecAdaPop, crawlerOpt) {
             // console.log("stagnan")
             // reposition
             for (let i = 0; i < newGenKomodos.length; i++) {
-                reposition(newGenKomodos[i])
+                newGenKomodos[i] = reposition(newGenKomodos[i])
             }
 
             rankKomodos(newGenKomodos)
@@ -290,12 +290,12 @@ function femaleBehavior (female, bigMale) {
         newOffspring1.z = rand * bigMale.z + (1 - rand) * female.z
         
         // mean
-        newOffspring1.x = (bigMale.journal.value1 + newOffspring1.x) / 2
-        newOffspring1.y = (bigMale.journal.value2 + newOffspring1.y) / 2
-        newOffspring1.z = (bigMale.journal.value3 + newOffspring1.z) / 2
+        newOffspring1.x = (female.journal.value1 * 0.6) + (newOffspring1.x * 0.4)
+        newOffspring1.y = (female.journal.value1 * 0.6) + (newOffspring1.x * 0.4)
+        newOffspring1.z = (female.journal.value1 * 0.6) + (newOffspring1.x * 0.4)
 
         // update fitness / evaluate quality
-        newOffspring1.fitness = f(newOffspring1.x, newOffspring1.y, newOffspring1.z, bigMale.journal.factor) 
+        newOffspring1.fitness = f(newOffspring1.x, newOffspring1.y, newOffspring1.z, female.journal.factor) 
     
         rand = Math.random()
         newOffspring2.x = rand * female.x + (1 - rand) * bigMale.x
@@ -305,9 +305,9 @@ function femaleBehavior (female, bigMale) {
         newOffspring2.z = rand * female.z + (1 - rand) * bigMale.z
 
         // mean
-        newOffspring2.x = (female.journal.value1 + newOffspring2.x) / 2
-        newOffspring2.y = (female.journal.value2 + newOffspring2.y) / 2
-        newOffspring2.z = (female.journal.value3 + newOffspring2.z) / 2
+        newOffspring2.x = (female.journal.value1 * 0.6) + (newOffspring2.x * 0.4)
+        newOffspring2.y = (female.journal.value2 * 0.6) + (newOffspring2.y * 0.4)
+        newOffspring2.z = (female.journal.value3 * 0.6) + (newOffspring2.z * 0.4)
 
         // update fitness / evaluate quality
         newOffspring2.fitness = f(newOffspring2.x, newOffspring2.y, newOffspring2.z, female.journal.factor) 
@@ -315,17 +315,20 @@ function femaleBehavior (female, bigMale) {
         // SIDE NOTE bisa jadi dokumentasi karena optimum adlaah 0 jadi kebalik (seauai paper)
         if (newOffspring1.fitness < newOffspring2.fitness) {
             if (newOffspring1.fitness < female.fitness) {
+                newOffspring1.id = female.id
                 newOffspring1.journal = female.journal
-                female = newOffspring1
+                return newOffspring1
             }
         } else if (newOffspring2.fitness < female.fitness) {
+            newOffspring2.id = female.id
             newOffspring2.journal = female.journal
-            female = newOffspring2
+            return newOffspring2
         }
     } else {
         // parthenogenesis 
         let newFemale = {
             'journal' : female.journal,
+            'id': female.id,
             'x' : 0, 
             'y' : 0, 
             'z' : 0,
@@ -356,13 +359,15 @@ function femaleBehavior (female, bigMale) {
         newFemale.z = (female.journal.value3 + newFemale.z) / 2
 
         // update fitness / evaluate quality
-        newFemale.fitness = f(newFemale.x, newFemale.y, newFemale.z, female.journal.factor) 
+        newFemale.fitness = f(newFemale.x, newFemale.y, newFemale.z, newFemale.journal.factor) 
 
         // SIDE NOTE bisa jadi dokumentasi karena optimum adlaah 0 jadi kebalik (seauai paper)
         if (newFemale.fitness < female.fitness) {
-            female = newFemale
+            return newFemale
         }
     }
+
+    return female
 }
 
 function smallKomodoBehavior (smallMales, bigMales) {
@@ -453,8 +458,10 @@ function reposition (komodo) {
     // if old better than new 
     if (temp.fitness < komodo.fitness) {
         // rollback
-        komodo = temp
-    } 
+        return temp
+    } else {
+        return komodo
+    }
 }
 
 
