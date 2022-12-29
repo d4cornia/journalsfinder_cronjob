@@ -231,7 +231,7 @@ async function addJournalsResult (userLogId, results) {
 
 // DIJALANIN LOCAL, untuk update hasil crawl keterbaru
 let READY = false
-cron.schedule('0 1 * * 0', async function() {
+cron.schedule('0 1 * * 0,4', async function() {
     console.log('running a task every sunday, ready : ' + READY);
     if (READY) {
         // semua user logs yang status 2 dilakukan fully focused cralwer dan ranked
@@ -298,7 +298,7 @@ cron.schedule('0 1 * * 0', async function() {
 });
 
 // set status to 2 untuk diperbarui
-cron.schedule('0 1 * * 3', async function() {
+cron.schedule('0 1 * * 2,6', async function() {
     console.log('running a task every wednesday')
     // semua user logs yang status 1
     let query = await firedb.collection('user_logs')
